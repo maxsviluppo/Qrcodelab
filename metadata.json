@@ -1,0 +1,7 @@
+{
+  "name": "QRCreator Pro - Futurist QR Generator",
+  "description": "A high-end, minimalist QR code generator with smart text optimization powered by Gemini. Features a sleek 'Informatica Blue' aesthetic and instant download capabilities.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
