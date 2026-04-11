@@ -6,7 +6,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 export const optimizeTextForQR = async (text: string): Promise<string> => {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: `Optimise the following text to be more concise while retaining all vital information, making it more suitable for a QR code (which handles shorter strings better). If it's a URL, don't change it. If it's descriptive text, summarize it. Text: "${text}"`,
       config: {
         temperature: 0.7,
@@ -24,7 +24,7 @@ export const optimizeTextForQR = async (text: string): Promise<string> => {
 export const parseContactInfo = async (info: string) => {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: `Extract contact information from this text: "${info}"`,
       config: {
         responseMimeType: "application/json",
@@ -56,7 +56,7 @@ export const parseContactInfo = async (info: string) => {
 export const decodeQRCode = async (base64Data: string, mimeType: string): Promise<string> => {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: [
         {
           inlineData: {
