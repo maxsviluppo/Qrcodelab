@@ -2,18 +2,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { QRConfig, QRType, DotType, CornerType } from './types';
 import QRCodeDisplay from './components/QRCodeDisplay';
-import { optimizeTextForQR, parseContactInfo, decodeQRCode } from './services/geminiService';
-
-type ViewMode = 'generator' | 'scanner';
 
 const App: React.FC = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('generator');
   const [activeType, setActiveType] = useState<QRType>('url');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<string | null>(null);
   const [showDevTools, setShowDevTools] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('qr_labs_dark_mode');
@@ -96,33 +88,7 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  const handleMagicFill = async () => {
-    const raw = `${vcard.name} ${vcard.org} ${vcard.job} ${vcard.tel} ${vcard.email} ${vcard.address} ${vcard.url} ${vcard.logo} ${vcard.note}`.trim();
-    if (!raw) return;
-    setIsProcessing(true);
-    const result = await parseContactInfo(raw);
-    if (result) {
-      setVcard(prev => ({ ...prev, ...result, name: result.name || prev.name }));
-    }
-    setIsProcessing(false);
-  };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsScanning(true);
-    setScanResult(null);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(',')[1];
-      const result = await decodeQRCode(base64, file.type);
-      if (result === 'ERR_NO_QR') setScanResult("Nessun codice QR rilevato.");
-      else if (result === 'ERR_SCAN_FAILED') setScanResult("Analisi fallita.");
-      else setScanResult(result);
-      setIsScanning(false);
-    };
-    reader.readAsDataURL(file);
-  };
 
   const types: { id: QRType; label: string; icon: React.ReactNode }[] = [
     { id: 'url', label: 'Link', icon: <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /> },
@@ -152,15 +118,14 @@ const App: React.FC = () => {
       <nav className={`fixed top-0 w-full z-50 border-b h-14 transition-colors duration-500 ${darkMode ? 'bg-slate-950/80 border-slate-900' : 'bg-white/80 border-slate-100'} glass-morphism`}>
         <div className="max-w-6xl mx-auto px-6 h-full flex items-center justify-between">
           <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => {setViewMode('generator'); setShowDevTools(false);}}>
+            <div className="flex items-center space-x-2 cursor-pointer group" onClick={() => setShowDevTools(false)}>
               <div className="w-7 h-7 bg-blue-informatica rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
                 <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3" /></svg>
               </div>
               <span className="text-base font-black tracking-tighter uppercase italic">QR<span className="text-blue-informatica">LABS</span></span>
             </div>
             <div className="hidden sm:flex items-center space-x-1 border-l border-slate-800/20 pl-6 h-5">
-              <button onClick={() => {setViewMode('generator'); setShowDevTools(false);}} className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-md ${viewMode === 'generator' && !showDevTools ? 'text-blue-informatica bg-blue-500/10' : 'text-slate-500 hover:text-blue-400'}`}>Crea</button>
-              <button onClick={() => {setViewMode('scanner'); setShowDevTools(false);}} className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-md ${viewMode === 'scanner' ? 'text-blue-informatica bg-blue-500/10' : 'text-slate-500 hover:text-blue-400'}`}>Analizza</button>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-md text-blue-informatica bg-blue-500/10">Generator Engine</span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -231,7 +196,7 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
-          ) : viewMode === 'generator' ? (
+          ) : (
             <>
               <section className="relative">
                 <div className="flex overflow-x-auto gap-2 pb-2 px-1 no-scrollbar">
@@ -294,9 +259,7 @@ const App: React.FC = () => {
                               />
                             </div>
                           ))}
-                          <button onClick={handleMagicFill} disabled={isProcessing} className="md:col-span-2 py-2.5 border rounded-lg text-[9px] font-black uppercase tracking-[0.2em] bg-blue-500/10 border-blue-500/20 text-blue-400">
-                            {isProcessing ? 'AI SCANNING...' : 'AUTOFILL AI ✨'}
-                          </button>
+                          {/* AI Magic Fill Removed for Stability */}
                         </div>
                       )}
                       {activeType === 'wifi' && (
@@ -336,18 +299,6 @@ const App: React.FC = () => {
                 </div>
               </div>
             </>
-          ) : (
-            <div className="max-w-xl mx-auto space-y-6 py-6 animate-fade-in">
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-black uppercase italic">Vision <span className="text-blue-informatica">Decoder</span></h2>
-                <p className="text-[9px] font-black uppercase tracking-[0.4em] opacity-40">Analisi Gemini Core 3.0</p>
-              </div>
-              <div onClick={() => fileInputRef.current?.click()} className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center cursor-pointer ${darkMode ? 'bg-slate-900/20 border-slate-800' : 'bg-white border-slate-200'}`}>
-                {isScanning ? <div className="animate-spin w-8 h-8 border-4 border-blue-informatica border-t-transparent rounded-full" /> : <div className="text-[10px] font-black uppercase opacity-50">Upload QR Image</div>}
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
-              </div>
-              {scanResult && <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white'}`}><p className="text-[8px] font-black uppercase opacity-40 mb-2">Risultato Decodifica:</p><div className="font-mono text-[10px] break-all text-blue-informatica">{scanResult}</div></div>}
-            </div>
           )}
         </div>
       </main>
