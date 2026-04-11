@@ -39,6 +39,7 @@ export const parseContactInfo = async (info: string) => {
             address: { type: Type.STRING, description: "Street, City, State, ZIP" },
             url: { type: Type.STRING, description: "Website URL" },
             logo: { type: Type.STRING, description: "URL to a logo or profile photo" },
+            note: { type: Type.STRING, description: "Extra notes, info, or biography" },
           },
           required: ["name"],
         },

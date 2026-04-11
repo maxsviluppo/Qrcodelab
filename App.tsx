@@ -25,7 +25,7 @@ const App: React.FC = () => {
   const [url, setUrl] = useState('');
   const [text, setText] = useState('');
   const [vcard, setVcard] = useState({ 
-    name: '', org: '', job: '', tel: '', email: '', address: '', url: '', logo: '' 
+    name: '', org: '', job: '', tel: '', email: '', address: '', url: '', logo: '', note: '' 
   });
   const [wifi, setWifi] = useState({ ssid: '', password: '', encryption: 'WPA' });
   const [email, setEmail] = useState({ to: '', subject: '', body: '' });
@@ -60,7 +60,7 @@ const App: React.FC = () => {
       data.job ? `TITLE:${data.job}` : '', data.org ? `ORG:${data.org}` : '',
       data.tel ? `TEL;TYPE=CELL:${data.tel}` : '', data.email ? `EMAIL:${data.email}` : '',
       data.address ? `ADR;TYPE=WORK:;;${data.address}` : '', data.url ? `URL:${data.url}` : '',
-      data.logo ? `PHOTO;VALUE=URI:${data.logo}` : '',
+      data.logo ? `PHOTO;VALUE=URI:${data.logo}` : '', data.note ? `NOTE:${data.note}` : '',
       'END:VCARD'
     ].filter(Boolean).join('\n');
   };
@@ -97,7 +97,7 @@ const App: React.FC = () => {
   }, [darkMode]);
 
   const handleMagicFill = async () => {
-    const raw = `${vcard.name} ${vcard.org} ${vcard.job} ${vcard.tel} ${vcard.email} ${vcard.address} ${vcard.url} ${vcard.logo}`.trim();
+    const raw = `${vcard.name} ${vcard.org} ${vcard.job} ${vcard.tel} ${vcard.email} ${vcard.address} ${vcard.url} ${vcard.logo} ${vcard.note}`.trim();
     if (!raw) return;
     setIsProcessing(true);
     const result = await parseContactInfo(raw);
@@ -281,7 +281,8 @@ const App: React.FC = () => {
                             {key:'email',label:'Email'},
                             {key:'url',label:'Sito Web'},
                             {key:'logo',label:'Logo / Foto URL'},
-                            {key:'address',label:'Indirizzo',full:true}
+                            {key:'address',label:'Indirizzo',full:true},
+                            {key:'note',label:'Note e Info Extra',full:true}
                           ].map(f => (
                             <div key={f.key} className={f.full ? 'md:col-span-2' : ''}>
                               <label className="text-[8px] font-black uppercase tracking-[0.1em] ml-1 opacity-50">{f.label}</label>
