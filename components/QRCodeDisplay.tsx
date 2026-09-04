@@ -58,12 +58,23 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ config }) => {
   }, [config]);
 
   const downloadQR = (format: 'png' | 'svg') => {
-    if (!config.value || config.value.trim() === '') return;
-    qrCode.current.download({ name: `qrlabs-export-${Date.now()}`, extension: format });
+    if (!config.value || config.value.trim() === '') {
+      alert("Inserisci un link o un testo prima di esportare!");
+      return;
+    }
+    
+    // Scarichiamo direttamente con l'estensione forzata nel nome e nelle opzioni
+    qrCode.current.download({ 
+      name: `qrlabs-qr-${Date.now()}.${format}`, 
+      extension: format 
+    });
   };
 
   const printQR = () => {
-    if (!config.value || config.value.trim() === '') return;
+    if (!config.value || config.value.trim() === '') {
+      alert("Inserisci un link o un testo prima di stampare!");
+      return;
+    }
     window.print();
   };
 

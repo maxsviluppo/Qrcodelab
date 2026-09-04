@@ -19,6 +19,15 @@ const App: React.FC = () => {
   const [vcard, setVcard] = useState({ 
     name: '', org: '', job: '', tel: '', email: '', address: '', url: '', logo: '', note: '' 
   });
+  const [fastCall, setFastCall] = useState({
+    nameOrCompany: '',
+    landline: '',
+    mobile: '',
+    address: '',
+    email: '',
+    url: '',
+    optionalMobiles: ['', '', '', '', '']
+  });
   const [wifi, setWifi] = useState({ ssid: '', password: '', encryption: 'WPA' });
   const [email, setEmail] = useState({ to: '', subject: '', body: '' });
   const [sms, setSms] = useState({ phone: '', message: '' });
@@ -57,9 +66,53 @@ const App: React.FC = () => {
     ].filter(Boolean).join('\n');
   };
 
+  const generateFastCallString = (data: typeof fastCall) => {
+    const name = data.nameOrCompany.trim();
+    const landline = data.landline.trim();
+    const mobile = data.mobile.trim();
+    const address = data.address.trim();
+    const email = data.email.trim();
+    const url = data.url.trim();
+    const optionals = data.optionalMobiles.map(m => m.trim()).filter(Boolean);
+
+    // Se è stato inserito unicamente il cellulare e null'altro, genera un URI tel: diretto
+    if (!name && !landline && !address && !email && !url && optionals.length === 0 && mobile) {
+      return `tel:${mobile}`;
+    }
+
+    if (!name && !landline && !mobile && !address && !email && !url && optionals.length === 0) {
+      return '';
+    }
+
+    const nameParts = name.split(' ');
+    const lastName = nameParts.length > 1 ? nameParts.pop() : '';
+    const firstName = nameParts.join(' ');
+
+    const lines = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      name ? `FN:${name}` : (mobile || landline ? `FN:${mobile || landline}` : 'FN:Fast Call'),
+      name ? `N:${lastName};${firstName};;;` : '',
+      name ? `ORG:${name}` : '',
+      landline ? `TEL;TYPE=WORK,VOICE:${landline}` : '',
+      mobile ? `TEL;TYPE=CELL,VOICE:${mobile}` : '',
+      email ? `EMAIL:${email}` : '',
+      url ? `URL:${url}` : '',
+      address ? `ADR;TYPE=WORK:;;${address}` : '',
+    ];
+
+    optionals.forEach((opt) => {
+      lines.push(`TEL;TYPE=CELL,VOICE:${opt}`);
+    });
+
+    lines.push('END:VCARD');
+    return lines.filter(Boolean).join('\n');
+  };
+
   const computedValue = useMemo(() => {
     switch (activeType) {
       case 'url': return url.trim();
+      case 'fastcall': return generateFastCallString(fastCall);
       case 'text': return text.trim();
       case 'wifi': return wifi.ssid ? `WIFI:S:${wifi.ssid};T:${wifi.encryption};P:${wifi.password};;` : '';
       case 'email': return email.to ? `mailto:${email.to}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}` : '';
@@ -73,7 +126,7 @@ const App: React.FC = () => {
       case 'tiktok': return tiktokUrl.trim();
       default: return '';
     }
-  }, [activeType, url, text, wifi, email, sms, vcard, fbUrl, pdfUrl, mp3Url, appStoreUrl, imgUrl, tiktokUrl]);
+  }, [activeType, url, fastCall, text, wifi, email, sms, vcard, fbUrl, pdfUrl, mp3Url, appStoreUrl, imgUrl, tiktokUrl]);
 
   useEffect(() => {
     setConfig(prev => ({ ...prev, value: computedValue }));
@@ -92,6 +145,7 @@ const App: React.FC = () => {
 
   const types: { id: QRType; label: string; icon: React.ReactNode }[] = [
     { id: 'url', label: 'Link', icon: <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /> },
+    { id: 'fastcall', label: 'Fast call', icon: <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /> },
     { id: 'facebook', label: 'Facebook', icon: <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" /> },
     { id: 'tiktok', label: 'TikTok', icon: <path d="M9 12a4 4 0 104 4V4a5 5 0 005 5" /> },
     { id: 'vcard', label: 'Contatto', icon: <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /> },
@@ -234,6 +288,137 @@ const App: React.FC = () => {
                             placeholder={`Inserisci link ${activeType}...`}
                             className={`w-full px-4 py-2.5 border rounded-lg outline-none text-sm font-semibold ${darkMode ? 'bg-slate-950/50 border-slate-800 focus:border-blue-informatica text-white' : 'bg-slate-50 border-slate-200 focus:border-blue-informatica text-slate-900'}`} 
                           />
+                        </div>
+                      )}
+                      {activeType === 'fastcall' && (
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-[0.1em] ml-1 opacity-50">
+                              Nome e Cognome o Nome Azienda
+                            </label>
+                            <input 
+                              type="text"
+                              value={fastCall.nameOrCompany} 
+                              onChange={e => setFastCall({...fastCall, nameOrCompany: e.target.value})} 
+                              placeholder="es. Mario Rossi oppure Acme S.r.l."
+                              className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${darkMode ? 'bg-slate-950/50 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`} 
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase tracking-[0.1em] ml-1 opacity-50 flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5 text-blue-informatica" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                                </svg>
+                                Telefono Fisso
+                              </label>
+                              <input 
+                                type="tel"
+                                value={fastCall.landline} 
+                                onChange={e => setFastCall({...fastCall, landline: e.target.value})} 
+                                placeholder="es. 081 1234567"
+                                className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${darkMode ? 'bg-slate-950/50 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`} 
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase tracking-[0.1em] ml-1 opacity-50 flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                                </svg>
+                                Cellulare
+                              </label>
+                              <input 
+                                type="tel"
+                                value={fastCall.mobile} 
+                                onChange={e => setFastCall({...fastCall, mobile: e.target.value})} 
+                                placeholder="es. +39 333 1234567"
+                                className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${darkMode ? 'bg-slate-950/50 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`} 
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-[0.1em] ml-1 opacity-50 flex items-center gap-1">
+                              <svg className="w-2.5 h-2.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                              </svg>
+                              Indirizzo
+                            </label>
+                            <input 
+                              type="text"
+                              value={fastCall.address} 
+                              onChange={e => setFastCall({...fastCall, address: e.target.value})} 
+                              placeholder="es. Via Roma 10, 80100 Napoli"
+                              className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${darkMode ? 'bg-slate-950/50 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`} 
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase tracking-[0.1em] ml-1 opacity-50 flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                </svg>
+                                Email
+                              </label>
+                              <input 
+                                type="email"
+                                value={fastCall.email} 
+                                onChange={e => setFastCall({...fastCall, email: e.target.value})} 
+                                placeholder="es. info@azienda.it"
+                                className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${darkMode ? 'bg-slate-950/50 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`} 
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase tracking-[0.1em] ml-1 opacity-50 flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                                </svg>
+                                Sito Internet Link
+                              </label>
+                              <input 
+                                type="url"
+                                value={fastCall.url} 
+                                onChange={e => setFastCall({...fastCall, url: e.target.value})} 
+                                placeholder="es. https://www.azienda.it"
+                                className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${darkMode ? 'bg-slate-950/50 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`} 
+                              />
+                            </div>
+                          </div>
+
+                          <div className={`p-4 rounded-xl border ${darkMode ? 'bg-slate-950/30 border-slate-800/80' : 'bg-slate-50/60 border-slate-200/60'} space-y-3`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[8px] font-black uppercase tracking-[0.15em] text-blue-informatica flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                5 Contatti Cellulare Opzionali
+                              </span>
+                              <span className="text-[8px] opacity-40 font-bold uppercase">Opzionali</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {[0, 1, 2, 3, 4].map(idx => (
+                                <div key={idx} className={idx === 4 ? 'sm:col-span-2' : ''}>
+                                  <label className="text-[8px] font-black uppercase tracking-wider opacity-50 ml-1">
+                                    Cellulare Opzionale {idx + 1}
+                                  </label>
+                                  <input 
+                                    type="tel"
+                                    value={fastCall.optionalMobiles[idx]} 
+                                    onChange={e => {
+                                      const updated = [...fastCall.optionalMobiles];
+                                      updated[idx] = e.target.value;
+                                      setFastCall({...fastCall, optionalMobiles: updated});
+                                    }} 
+                                    placeholder={`Numero cellulare #${idx + 1}`}
+                                    className={`w-full px-3 py-2 border rounded-lg text-xs font-semibold ${darkMode ? 'bg-slate-900/60 border-slate-800 text-white' : 'bg-white border-slate-100 text-slate-900'}`} 
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       )}
                       {activeType === 'vcard' && (
